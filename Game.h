@@ -25,6 +25,8 @@ struct Enemy {
     float originalX;
     float speed;
     float wobbleOffset;
+    int hp;           // Πόσες σφαίρες αντέχει
+    float flashTimer;
 };
 
 struct Particle {
@@ -34,12 +36,25 @@ struct Particle {
     float life;         // Πόσο χρόνο ζωής έχει (π.χ. 1.0 δευτερόλεπτο)
 };
 
+struct GameData {
+    int score;
+    int highScore;
+    int level;
+    int lives; // <--- ΝΕΟ: Ζωές παίκτη
+    GameState state;
+
+    // Ξεκιναμε με 3 ζωες
+    GameData() : score(0), highScore(0), level(1), lives(3), state(GAME_MENU) {}
+};
+
 // --- THE GAME CLASS ---
 class Game {
 public:
     // Constructor / Destructor
     Game(unsigned int width, unsigned int height);
     ~Game();
+
+    GameData gameData;
 
     // Vasikes Leitourgies
     void Init();
@@ -50,19 +65,14 @@ public:
     // Input Callbacks
     void SetKeys(int key, bool pressed);
     void ProcessEvents(int key); // Gia Enter, R, P
-
-    // State
-    GameState State;
     bool Keys[1024];
     unsigned int Width, Height;
-    int Score;
-    int HighScore;
-    int Level;
+
 
 private:
     // Resources (Pointers gia na ta diaxeirizomaste emeis)
     Shader* shader;
-    Texture* texShip, * texAlien, * texSpace, * texStart, * texOver, * texPause;
+    Texture* texShip, * texAlien, * texSpace, * texStart, * texOver, * texPause, * texBullet, * texAlienHit;
     Audio* audio;
 
     // Game Objects
@@ -81,6 +91,8 @@ private:
     float currentSpawnInterval;
     float lastShootTime;
     float baseEnemySpeed;
+    float immunityTimer;
+
 
     // Private Helpers
     void SpawnEnemy();

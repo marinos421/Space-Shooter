@@ -69,8 +69,8 @@ int main() {
         SpaceShooter.Update(deltaTime);
 
         // 3. Render
-        if (SpaceShooter.State == GAME_OVER) glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
-        else if (SpaceShooter.State == GAME_PAUSED) glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+        if (SpaceShooter.gameData.state == GAME_OVER) glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
+        else if (SpaceShooter.gameData.state == GAME_PAUSED) glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
         else glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -80,10 +80,13 @@ int main() {
 
         // Update Title with Score
         std::stringstream ss;
-        ss << "Space Shooter | LVL: " << SpaceShooter.Level
-            << " | Score: " << SpaceShooter.Score
-            << " | High Score: " << SpaceShooter.HighScore;
+		ss << "Space Shooter | LVL: " << SpaceShooter.gameData.level
+            << " | Lives: " << SpaceShooter.gameData.lives
+            << " | Score: " << SpaceShooter.gameData.score
+            << " | High Score: " << SpaceShooter.gameData.highScore;
         glfwSetWindowTitle(window, ss.str().c_str());
+
+        glfwPollEvents();
     }
 
     glfwTerminate();

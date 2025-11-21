@@ -3,17 +3,24 @@ out vec4 FragColor;
 
 in vec2 TexCoord;
 
-// Μεταβλητές που στέλνουμε από την C++
-uniform sampler2D texture1; // Η εικόνα
-uniform bool useTexture;    // Διακόπτης: true = εικόνα, false = χρώμα
-uniform vec3 myColor;       // Το χρώμα (αν δεν βάλουμε εικόνα)
+uniform sampler2D texture1;
+uniform bool useTexture;
+uniform vec3 myColor;
+uniform bool flash; // <--- ΝΕΑ ΜΕΤΑΒΛΗΤΗ
 
 void main() {
+    vec4 result;
+    
     if (useTexture) {
-        // Αν είναι ο παίκτης, βάλε την υφή
-        FragColor = texture(texture1, TexCoord);
+        result = texture(texture1, TexCoord);
     } else {
-        // Αν είναι εχθρός ή σφαίρα, βάλε το χρώμα (myColor)
-        FragColor = vec4(myColor, 1.0);
+        result = vec4(myColor, 1.0);
+    }
+
+    // Αν το flash είναι true, το χρώμα γίνεται κάτασπρο
+    if (flash) {
+        FragColor = vec4(1.0, 1.0, 1.0, 1.0); 
+    } else {
+        FragColor = result;
     }
 }
