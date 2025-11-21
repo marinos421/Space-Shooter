@@ -133,15 +133,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="source1.cpp" />
+    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Basic.frag" />
     <None Include="Basic.vert" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="shader.h" />
-    <ClInclude Include="texture.h" />
+    <ClInclude Include="Audio.h" />
+    <ClInclude Include="Game.h" />
+    <ClInclude Include="Shader.h" />
+    <ClInclude Include="Texture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
