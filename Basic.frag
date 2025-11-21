@@ -19,7 +19,7 @@ void main() {
 
     // Αν το flash είναι true, το χρώμα γίνεται κάτασπρο
     if (flash) {
-        FragColor = vec4(1.0, 1.0, 1.0, 1.0); 
+        FragColor = vec4(1.0, 1.0, 1.0, 0.1); 
     } else {
         FragColor = result;
     }
