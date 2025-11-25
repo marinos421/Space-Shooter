@@ -8,7 +8,8 @@
 enum PowerUpType {
     POWER_LIFE,
     POWER_TRIPLE,
-    POWER_SHIELD
+    POWER_SHIELD,
+    POWER_PIERCING
 };
 
 struct PowerUp {

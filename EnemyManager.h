@@ -32,6 +32,7 @@ private:
     Texture* texBasic, * texShooter, * texBoss, * texHit, * texShooterHit;
     Texture* texBossMine; // Boss Lvl 5 Assets
     Texture* texBossShip; // Boss Lvl 10 Assets
+    Texture* texSplitter;
 
     float CalculateSpeed(int level);
     int CalculateHP(int level);

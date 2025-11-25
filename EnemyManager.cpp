@@ -23,6 +23,7 @@ EnemyManager::~EnemyManager() {
     delete texShooterHit;
     delete texBossMine;
     delete texBossShip;
+    delete texSplitter;
 }
 
 void EnemyManager::Init() {
@@ -34,6 +35,7 @@ void EnemyManager::Init() {
     texShooterHit = new Texture("enemyship_hit.png");
     texBossMine = new Texture("boss_mine.png");
     texBossShip = new Texture("boss_ship.png");
+    texSplitter = new Texture("splitter.png");
 
     bossActive = false;
 }
@@ -107,6 +109,20 @@ void EnemyManager::SpawnEnemy(int level) {
         if (rand() % 100 < 30) {
             e.type = ENEMY_SHOOTER;
             e.speed *= 0.7f;
+        }
+    }
+
+    if (level >= 4 && level % 5 != 0) {
+        int rng = rand() % 100;
+        if (rng < 20) {          // 20% Shooter
+            e.type = ENEMY_SHOOTER;
+            e.speed *= 0.7f;
+        }
+        else if (rng < 40) {     // 20% Splitter (ΝΕΟ)
+            e.type = ENEMY_SPLITTER;
+            e.hp = 2 + (level / 3); // Λίγο πιο ανθεκτικός
+            e.splitLevel = 0;       // Είναι ο μεγάλος
+            e.speed *= 0.8f;        // Λίγο πιο αργός
         }
     }
 
@@ -220,13 +236,15 @@ void EnemyManager::Render(Shader* shader) {
             // Αν χτυπήθηκαν, βάλε τη σπασμένη εικόνα
             if (e.flashTimer > 0.0f) {
                 if (e.type == ENEMY_SHOOTER) texShooterHit->bind();
-                else texHit->bind();
+                else if (e.type == ENEMY_BASIC) texHit->bind();
+                else continue;
 
                 // Εδώ το useShaderFlash μένει false, γιατί η ίδια η εικόνα είναι λευκή/σπασμένη
             }
             // Κανονική κατάσταση
             else {
                 if (e.type == ENEMY_SHOOTER) texShooter->bind();
+				else if (e.type == ENEMY_SPLITTER) texSplitter->bind();
                 else texBasic->bind();
             }
         }

@@ -40,7 +40,7 @@ public:
 private:
     Shader* shader;
     Texture* texShip, * texSpace, * texStart, * texOver, * texPause, * texBullet;
-    Texture* texPowTriple, * texPowShield;
+    Texture* texPowTriple, * texPowShield, * texPowPiercing;
 
     Audio* audio;
 
@@ -53,6 +53,9 @@ private:
 
     void SpawnExplosion(glm::vec3 position);
     void SpawnPowerUp(glm::vec3 position);
+
+    void LoadHighScore();
+    void SaveHighScore();
 
     glm::vec3 playerPos;
     unsigned int VAO, VBO;

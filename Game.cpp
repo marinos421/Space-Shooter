@@ -7,6 +7,7 @@
 // Μην ξεχασεις να κανεις include τον manager
 #include "EnemyManager.h" 
 #include "Commons.h"
+#include "fstream"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
@@ -30,7 +31,7 @@ Game::~Game() {
     delete texStart; delete texOver; delete texPause;
     delete texBullet;
     delete texPowTriple; delete texPowShield;
-
+    delete texPowPiercing;
     delete audio;
 
     // DELETE MANAGER
@@ -49,6 +50,7 @@ void Game::Init() {
 
     texPowTriple = new Texture("powerup_triple.png");
     texPowShield = new Texture("powerup_shield.png");
+	texPowPiercing = new Texture("powerup_piercing.png");
 
     // INIT ENEMY MANAGER
     enemyManager = new EnemyManager();
@@ -68,6 +70,7 @@ void Game::Init() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float))); glEnableVertexAttribArray(1);
 
     ResetLevel();
+    LoadHighScore();
     gameData.state = GAME_MENU;
     //gameData.level = 9;
 }
@@ -77,6 +80,9 @@ void Game::ResetLevel() {
     gameData.lives = 3;
     gameData.tripleShotTimer = 0.0f;
     immunityTimer = 0.0f;
+    gameData.comboCount = 0;
+    gameData.comboTimer = 0.0f;
+    gameData.multiplier = 1.0f;
 
     playerPos = glm::vec3(0.0f, -8.0f, 0.0f);
     bullets.clear(); particles.clear(); powerups.clear();
@@ -106,13 +112,33 @@ void Game::ProcessInput(float dt) {
         static float shootCooldown = 0.2f;
         float currentTime = glfwGetTime();
         if (Keys[GLFW_KEY_SPACE] && currentTime - lastShootTime >= shootCooldown) {
+
+            // Υπολογισμός Penetration
+            int pen = 1;
+            if (gameData.piercingTimer > 0.0f) pen = 100; // Piercing mode!
+
             if (gameData.tripleShotTimer > 0.0f) {
-                Bullet b1; b1.position = playerPos + glm::vec3(0, 1.5f, 0); b1.active = true; b1.velocity = glm::vec3(0.0f, 18.0f, 0.0f); bullets.push_back(b1);
-                Bullet b2; b2.position = playerPos + glm::vec3(0.5f, 1.5f, 0); b2.active = true; b2.velocity = glm::vec3(5.0f, 18.0f, 0.0f); bullets.push_back(b2);
-                Bullet b3; b3.position = playerPos + glm::vec3(-0.5f, 1.5f, 0); b3.active = true; b3.velocity = glm::vec3(-5.0f, 18.0f, 0.0f); bullets.push_back(b3);
+                // ΠΡΟΣΘΕΣΕ ΤΟ pen ΣΕ ΟΛΕΣ!
+                Bullet b1; b1.position = playerPos + glm::vec3(0, 1.5f, 0); b1.active = true;
+                b1.velocity = glm::vec3(0.0f, 18.0f, 0.0f);
+                b1.penetration = pen; // <--- FIX
+                bullets.push_back(b1);
+
+                Bullet b2; b2.position = playerPos + glm::vec3(0.5f, 1.5f, 0); b2.active = true;
+                b2.velocity = glm::vec3(5.0f, 18.0f, 0.0f);
+                b2.penetration = pen; // <--- FIX
+                bullets.push_back(b2);
+
+                Bullet b3; b3.position = playerPos + glm::vec3(-0.5f, 1.5f, 0); b3.active = true;
+                b3.velocity = glm::vec3(-5.0f, 18.0f, 0.0f);
+                b3.penetration = pen; // <--- FIX
+                bullets.push_back(b3);
             }
             else {
-                Bullet b; b.position = playerPos + glm::vec3(0, 1.5f, 0); b.active = true; b.velocity = glm::vec3(0.0f, 18.0f, 0.0f); bullets.push_back(b);
+                Bullet b; b.position = playerPos + glm::vec3(0, 1.5f, 0); b.active = true;
+                b.velocity = glm::vec3(0.0f, 18.0f, 0.0f);
+                b.penetration = pen; // <--- FIX
+                bullets.push_back(b);
             }
             lastShootTime = currentTime;
             audio->play("shoot.mp3");
@@ -124,9 +150,10 @@ void Game::SpawnPowerUp(glm::vec3 position) {
     int chance = rand() % 100;
     if (chance < 10) {
         PowerUpType type;
-        int typeRnd = rand() % 3;
+        int typeRnd = rand() % 4;
         if (typeRnd == 0) type = POWER_LIFE;
         else if (typeRnd == 1) type = POWER_TRIPLE;
+		else if (typeRnd == 2) type = POWER_PIERCING;
         else type = POWER_SHIELD;
         powerups.push_back(PowerUp(position, type));
     }
@@ -141,8 +168,19 @@ void Game::Update(float dt) {
     if (gameData.state == GAME_ACTIVE) {
         float currentTime = glfwGetTime();
 
+        if (gameData.comboTimer > 0.0f) {
+            gameData.comboTimer -= dt;
+            if (gameData.comboTimer <= 0.0f) {
+                // Ο χρόνος τελείωσε! Χάνεις το combo.
+                gameData.comboCount = 0;
+                gameData.multiplier = 1.0f;
+                std::cout << "Combo Lost!" << std::endl; // Debug
+            }
+        }
+
         if (immunityTimer > 0.0f) immunityTimer -= dt;
         if (gameData.tripleShotTimer > 0.0f) gameData.tripleShotTimer -= dt;
+        if (gameData.piercingTimer > 0.0f) gameData.piercingTimer -= dt;
 
         // Level Logic
         int newLevel = 1 + (gameData.score / 500);
@@ -165,6 +203,7 @@ void Game::Update(float dt) {
         // --- COLLISION: BULLET vs ENEMY ---
                 // Παιρνουμε αναφορά στη λιστα εχθρων απο τον Manager
         std::vector<Enemy>& enemies = enemyManager->GetEnemies();
+        std::vector<Enemy> spawnedMinions;
 
         for (auto& b : bullets) {
             if (!b.active) continue;
@@ -182,34 +221,97 @@ void Game::Update(float dt) {
                 // Χρησιμοποιούμε το hitRadius αντί για το σκέτο 1.2f
                 if (glm::distance(b.position, e.position) < hitRadius) {
 
-                    b.active = false;
+                    // PIERCING LOGIC
+                    b.penetration--;
+                    if (b.penetration <= 0) {
+                        b.active = false;
+                    }
+                
                     e.hp--; // <--- ΑΥΤΟ ΜΕΙΩΝΕΙ ΤΗ ΖΩΗ ΤΟΥ BOSS ΚΑΝΟΝΙΚΑ
                     e.flashTimer = 0.1f;
 
                     if (e.hp <= 0) {
                         SpawnExplosion(e.position);
+                        SpawnPowerUp(e.position);
+                        glm::vec3 deathPos = e.position;
+                        e.position.y = -50.0f; // Τον διώχνουμε για να διαγραφεί
 
-                        // Αν είναι Boss, ρίχνει πολλά δώρα
+                        // --- 1. ΥΠΟΛΟΓΙΣΜΟΣ ΠΟΝΤΩΝ (BASE SCORE) ---
+                        int basePoints = 10; // Οι απλές νάρκες (Basic)
+
+                        if (e.type == ENEMY_SHOOTER) {
+                            basePoints = 20; // Τα πλοία που πυροβολούν αξίζουν διπλά
+
+                        }
+                        else if (e.type == ENEMY_SPLITTER && e.splitLevel == 0) {
+                            for (int k = 0; k < 2; k++) {
+                                Enemy mini;
+                                mini.position = deathPos; // Χρήση της σωστής θέσης!
+                                mini.originalX = deathPos.x;
+
+                                float dirX = (k == 0) ? -1.5f : 1.5f;
+                                mini.wobbleOffset = dirX;
+
+                                // Initialize Speed! (Fixing garbage value)
+                                mini.speed = 1.5f;
+
+                                mini.hp = 1;
+                                mini.maxHp = 1;
+                                mini.splitLevel = 1;
+                                mini.type = ENEMY_SPLITTER;
+                                mini.flashTimer = 0.0f;
+                                mini.weaponTimer = 0.0f;
+
+                                spawnedMinions.push_back(mini);
+                            }
+                        }
+                        else if (e.type == ENEMY_BOSS_MINE || e.type == ENEMY_BOSS_SHIP) {
+                            basePoints = 1000; // Τα Boss δίνουν πολλά για να αλλάξεις Level
+                        }
+
+                        // --- 2. ΕΦΑΡΜΟΓΗ MULTIPLIER ---
+                        // Τύπος: Πόντοι = Βάση * Πολλαπλασιαστής
+                        int finalPoints = (int)(basePoints * gameData.multiplier);
+                        gameData.score += finalPoints;
+
+                        // --- 3. ΕΝΗΜΕΡΩΣΗ COMBO (Μόνο για μικρούς εχθρούς) ---
+                        if (e.type != ENEMY_BOSS_MINE && e.type != ENEMY_BOSS_SHIP) {
+                            gameData.comboCount++;       // Αυξάνουμε το σερί kills
+                            gameData.comboTimer = 3.0f;  // Έχεις 3 δευτερόλεπτα για τον επόμενο!
+
+                            // Κάθε kill ανεβάζει τον πολλαπλασιαστή κατά 0.1
+                            gameData.multiplier = 1.0f + (gameData.comboCount * 0.1f);
+
+                            // Βάζουμε ταβάνι (Cap) στο x5.0 για να μην ξεφύγει
+                            if (gameData.multiplier > 5.0f) gameData.multiplier = 5.0f;
+                        }
+
+                        // --- 4. POWER UPS (Όπως τα είχες) ---
                         if (e.type == ENEMY_BOSS_MINE || e.type == ENEMY_BOSS_SHIP) {
                             SpawnPowerUp(e.position);
                             SpawnPowerUp(e.position + glm::vec3(2.0f, 0.0f, 0.0f));
-                            gameData.score += 50; // Πολλοί πόντοι για να αλλάξει Level
                         }
                         else {
-                            SpawnPowerUp(e.position); // Τυχαίο δώρο (με πιθανότητα)
-                            gameData.score += 500;
+                            SpawnPowerUp(e.position);
                         }
 
-                        e.position.y = -50.0f; // Mark for deletion
+                        // --- 5. HIGH SCORE & SAVE ---
+                        if (gameData.score > gameData.highScore) {
+                            gameData.highScore = gameData.score;
+                            SaveHighScore();
+                        }
 
-                        if (gameData.score > gameData.highScore) gameData.highScore = gameData.score;
                         audio->play("explosion.mp3");
                     }
                     else { audio->play("hit.mp3"); }
                     break;
                 }
             }
-        }
+
+            if (!spawnedMinions.empty()) {
+                enemies.insert(enemies.end(), spawnedMinions.begin(), spawnedMinions.end());
+            }
+        }  
 
         // --- COLLISION: PLAYER vs POWERUP ---
         for (auto& p : powerups) {
@@ -219,6 +321,9 @@ void Game::Update(float dt) {
                 if (p.type == POWER_LIFE) { gameData.lives++; }
                 else if (p.type == POWER_TRIPLE) { gameData.tripleShotTimer = 5.0f; }
                 else if (p.type == POWER_SHIELD) { immunityTimer = 5.0f; }
+                else if (p.type == POWER_PIERCING) {
+                    gameData.piercingTimer = 5.0f;
+                }
             }
         }
 
@@ -232,6 +337,9 @@ void Game::Update(float dt) {
                 abs(enemies[i].position.x - playerPos.x) < hitboxSize) {
                 if (immunityTimer <= 0.0f) {
                     gameData.lives--;
+                    gameData.comboCount = 0;
+                    gameData.multiplier = 1.0f;
+                    gameData.comboTimer = 0.0f;
                     audio->play("explosion.mp3");
                     SpawnExplosion(playerPos);
                     if (gameData.lives > 0) {
@@ -318,6 +426,7 @@ void Game::Render() {
         for (auto& p : powerups) {
             if (p.type == POWER_LIFE) { texShip->bind(); } // Life = Ship icon
             else if (p.type == POWER_TRIPLE) { texPowTriple->bind(); }
+			else if (p.type == POWER_PIERCING) { texPowPiercing->bind(); }
             else { texPowShield->bind(); }
 
             model = glm::translate(glm::mat4(1.0f), p.position);
@@ -427,5 +536,25 @@ void Game::Render() {
         texOver->bind(); shader->setBool("useTexture", true);
         glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 5.0f)); model = glm::scale(model, glm::vec3(10.0f, 5.0f, 1.0f));
         shader->setMat4("model", model); glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+}
+
+void Game::LoadHighScore() {
+    std::ifstream inputFile("highscore.txt"); // Προσπάθησε να ανοίξεις το αρχείο
+    if (inputFile.is_open()) {
+        inputFile >> gameData.highScore; // Διάβασε τον αριθμό
+        inputFile.close();
+        std::cout << "High Score Loaded: " << gameData.highScore << std::endl;
+    }
+    else {
+        gameData.highScore = 0; // Αν δεν υπάρχει αρχείο (πρώτη φορά), βάλε 0
+    }
+}
+
+void Game::SaveHighScore() {
+    std::ofstream outputFile("highscore.txt"); // Άνοιξε για γράψιμο (θα διαγράψει το παλιό)
+    if (outputFile.is_open()) {
+        outputFile << gameData.highScore; // Γράψε το νέο ρεκόρ
+        outputFile.close();
     }
 }

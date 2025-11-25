@@ -83,7 +83,8 @@ int main() {
 		ss << "Space Shooter | LVL: " << SpaceShooter.gameData.level
             << " | Lives: " << SpaceShooter.gameData.lives
             << " | Score: " << SpaceShooter.gameData.score
-            << " | High Score: " << SpaceShooter.gameData.highScore;
+            << " | High Score: " << SpaceShooter.gameData.highScore
+            << " | Combo: x" << SpaceShooter.gameData.multiplier;
         glfwSetWindowTitle(window, ss.str().c_str());
 
         glfwPollEvents();

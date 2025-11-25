@@ -13,7 +13,8 @@ enum EnemyType {
     ENEMY_BASIC,
     ENEMY_SHOOTER,
     ENEMY_BOSS_MINE, // Boss Level 5 (Dive + Minions)
-    ENEMY_BOSS_SHIP  // Boss Level 10 (Targeted + Spread)
+    ENEMY_BOSS_SHIP, // Boss Level 10 (Targeted + Spread)
+    ENEMY_SPLITTER
 };
 
 // --- STRUCTS ---
@@ -21,6 +22,7 @@ struct Bullet {
     glm::vec3 position;
     glm::vec3 velocity;
     bool active;
+    int penetration;
 };
 
 struct Enemy {
@@ -31,6 +33,7 @@ struct Enemy {
     int hp;
     int maxHp;
     float flashTimer;
+    int splitLevel;
 
     EnemyType type;
     float weaponTimer;
@@ -58,8 +61,13 @@ struct GameData {
     int lives;
     GameState state;
     float tripleShotTimer;
+    float piercingTimer;
 
-    GameData() : score(0), highScore(0), level(1), lives(3), state(GAME_MENU), tripleShotTimer(0.0f) {}
+    int comboCount;
+    float comboTimer;
+    float multiplier;
+
+    GameData() : score(0), highScore(0), level(1), lives(3), state(GAME_MENU), tripleShotTimer(0.0f), comboCount(0), comboTimer(0.0f), multiplier(1.0f), piercingTimer(0.0f) {}
 };
 
 #endif
